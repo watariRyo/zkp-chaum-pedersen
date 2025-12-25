@@ -1,0 +1,8 @@
+{
+  "name": "zkp-chaum-pedersen",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "boost-multiprecision",
+    "gtest"
+  ]
+}
