@@ -72,7 +72,7 @@ if(EXISTS "${zkp_auth_proto}")
 endif()
 
 # --- Your Application Executable ---
-add_executable(zkp_app main.cpp main.cpp auth_server.cpp auth_service_impl.cpp)
+add_executable(zkp_app main.cpp auth_server.cpp auth_service_impl.cpp)
 
 target_link_libraries(zkp_app
   PRIVATE zkp_auth_grpc_proto

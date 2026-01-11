@@ -17,13 +17,8 @@ C++20
 vcpkgで依存管理を行っている。  
 
 ```bash
-# ソースビルド
-$ make build-exe
-```
-
-```bash
-# grpcの生成
-# CMakeListsに定義を記載し、cmake/build以下に生成
-# target_include_directoriesによってルートからも参照できるように設定している
-$ make build-grpc
+# grpc生成と実行ファイル作成
+# CMakeListsに定義を記載し、build以下に生成
+# target_include_directoriesによってルートからも参照できるように設定する
+$ make build
 ``` 
