@@ -1,4 +1,5 @@
 #include "auth_service_impl.hpp"
+#include "chaum_pedersen.hpp"
 #include <iostream>
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -13,6 +14,14 @@ cpp_int AuthServiceImpl::bytes_to_cpp_int(const std::string& s) {
     import_bits(n, s.begin(), s.end());
     return n;
 }
+
+std::string AuthServiceImpl::cpp_int_to_bytes(const cpp_int& n) {
+    std::string s;
+    // export_bitsはビッグエンディアンでバイト列を出力する
+    export_bits(n, std::back_inserter(s), 8);
+    return s;
+}
+
 
 
 grpc::Status AuthServiceImpl::Register(grpc::ServerContext* context,
@@ -57,7 +66,42 @@ grpc::Status AuthServiceImpl::CreateAuthenticationChallenge(
     const zkp_auth::AuthenticationChallengeRequest* request,
     zkp_auth::AuthenticationChallengeResponse* response) {
     // Implementation of creating authentication challenge
-    std::cout << "Creating authentication challenge for user. usewr: " << request->user()  << std::endl;
+    std::cout << "Creating authentication challenge for user. user: " << request->user()  << std::endl;
+
+    const std::string& user = request->user();
+    if (user.empty()) {
+        return grpc::Status(grpc::INVALID_ARGUMENT, "Username cannot be empty.");
+    }
+
+    // RFC5114のqを使用
+    cpp_int q("0xF518AA8781A8DF278ABA4E7D64B7CB9D49462353");
+    cpp_int c = generate_random(q);
+    std::string auth_id = generate_auth_id();
+
+    bool user_found = user_store_.access([&](auto& users) {
+        auto it = users.find(user);
+        if (it == users.end()) {
+            return false;
+        }
+        session_store_.access([&](auto& sessions) {
+            AuthSession session = {
+                .user = user,
+                .r1 = bytes_to_cpp_int(request->r1()),
+                .r2 = bytes_to_cpp_int(request->r2()),
+                .c = c
+            };
+            sessions[auth_id] = std::move(session);
+        });
+        return true;
+    });
+
+    if (!user_found) {
+        return grpc::Status(grpc::NOT_FOUND, "User not found.");
+    }
+
+    response->set_auth_id(auth_id);
+    response->set_c(cpp_int_to_bytes(c)); // 16進数文字列としてセット
+
     return grpc::Status::OK;
 }
 

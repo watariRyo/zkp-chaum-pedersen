@@ -20,5 +20,5 @@ vcpkgで依存管理を行っている。
 # grpc生成と実行ファイル作成
 # CMakeListsに定義を記載し、build以下に生成
 # target_include_directoriesによってルートからも参照できるように設定する
-$ make build
+$ make build-exe
 ``` 

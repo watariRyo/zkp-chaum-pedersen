@@ -2,6 +2,9 @@
 #define AUTH_SERVICE_IMPL_HPP
 
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <mutex>
 #include <unordered_map>
 #include <grpcpp/grpcpp.h>
@@ -26,19 +29,34 @@ public:
         zkp_auth::AuthenticationAnswerResponse* response) override;
 private:
     cpp_int bytes_to_cpp_int(const std::string& s);
+    std::string cpp_int_to_bytes(const cpp_int& n);
+
+    std::string generate_auth_id() {
+        boost::uuids::uuid uuid = boost::uuids::random_generator()();
+        return boost::uuids::to_string(uuid);
+    }
 
     struct UserInfo {
         // registration
         std::string name;
         cpp_int y1;
         cpp_int y2;
+        // // authorization
+        // cpp_int r1;
+        // cpp_int r2;
+        // // verification
+        // cpp_int c;
+        // cpp_int s;
+        // std::string session_id;
+    };
+
+    struct AuthSession {
+        std::string user;
         // authorization
         cpp_int r1;
         cpp_int r2;
         // verification
         cpp_int c;
-        cpp_int s;
-        std::string session_id;
     };
     
     // 複数リクエストからの同時アクセス保護のためのユーザーストア
@@ -54,7 +72,23 @@ private:
         }
     };
 
+    struct SessionStore {
+        std::mutex mutex;
+        std::unordered_map<std::string, AuthSession> sessions;
+
+        template<typename Func>
+        auto access(Func f) {
+            std::lock_guard<std::mutex> lock(mutex);
+            return f(sessions);
+        }
+    };
+
+    // NOTE: 実際のgRPCでは、std::mutex + std::unordered_mapではなく、
+    // tbb::concurrent_hash_mapを使ったほうが良い。
+    // ロック粒度が細かく（コンテナ内部で並列化される）、パフォーマンス面でスレッドが増えてもロック競合が起きにくい。
+
     UserStore user_store_;
+    SessionStore session_store_;
 };
 
 #endif // AUTH_SERVICE_IMPL_HPP
