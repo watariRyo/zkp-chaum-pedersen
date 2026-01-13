@@ -1,5 +1,6 @@
 #include "auth_service_impl.hpp"
 #include "chaum_pedersen.hpp"
+#include "zkp_constants.hpp"
 #include <iostream>
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -21,8 +22,6 @@ std::string AuthServiceImpl::cpp_int_to_bytes(const cpp_int& n) {
     export_bits(n, std::back_inserter(s), 8);
     return s;
 }
-
-
 
 grpc::Status AuthServiceImpl::Register(grpc::ServerContext* context,
                                         const zkp_auth::RegisterRequest* request,
@@ -74,7 +73,8 @@ grpc::Status AuthServiceImpl::CreateAuthenticationChallenge(
     }
 
     // RFC5114のqを使用
-    cpp_int q("0xF518AA8781A8DF278ABA4E7D64B7CB9D49462353");
+    auto constants = get_zkp_constants();
+    cpp_int q = constants.q;
     cpp_int c = generate_random(q);
     std::string auth_id = generate_auth_id();
 
@@ -111,5 +111,69 @@ grpc::Status AuthServiceImpl::VerifyAuthentication(
     zkp_auth::AuthenticationAnswerResponse* response) {
     // Implementation of verifying authentication
     std::cout << "Verifying authentication for auth_id: " << request->auth_id() << std::endl;
+
+    const std::string& auth_id = request->auth_id();
+    if (auth_id.empty()) {
+        return grpc::Status(grpc::INVALID_ARGUMENT, "INVALID REQUEST.");
+    }
+
+    // 1. セッション情報を取得
+    std::optional<AuthSession> session_opt;
+    session_store_.access([&](const auto& sessions) {
+        auto it = sessions.find(auth_id);
+        if (it != sessions.end()) {
+            session_opt = it->second;
+        }
+    });
+
+    if (!session_opt) {
+        return grpc::Status(grpc::NOT_FOUND, "Authentication session not found or expired.");
+    }
+    const AuthSession& session = *session_opt;
+
+    // 2. ユーザー情報を取得
+    std::optional<UserInfo> user_info_opt;
+    user_store_.access([&](const auto& users) {
+        auto it = users.find(session.user);
+        if (it != users.end()) {
+            user_info_opt = it->second;
+        }
+    });
+
+    if (!user_info_opt) {
+        // セッションは存在したが、対応するユーザーがいない（通常は起こり得ない）
+        session_store_.access([&](auto& sessions) {
+            sessions.erase(auth_id);
+        });
+        return grpc::Status(grpc::INTERNAL, "User associated with the session not found.");
+    }
+    const UserInfo& user_info = *user_info_opt;
+
+    // 3. Chaum-Pedersen検証を実行
+    const auto constants = get_zkp_constants();
+    ChaumPedersen cp(constants.p, constants.q, constants.g, constants.h);
+
+    Commitment commitment = {session.r1, session.r2};
+    PublicKeys public_keys = {user_info.y1, user_info.y2};
+    Challenge challenge = {session.c};
+    Response response_s = {bytes_to_cpp_int(request->s())};
+
+    bool is_verified = cp.verify_proof(commitment, public_keys, challenge, response_s);
+
+    // 4. 検証後、セッションを削除する
+    session_store_.access([&](auto& sessions) {
+        sessions.erase(auth_id);
+    });
+
+    if (!is_verified) {
+        return grpc::Status(grpc::PERMISSION_DENIED, "Authentication failed.");
+    }
+
+    // 5. セッションIDを生成して返す
+    std::string session_id = generate_auth_id(); // UUIDをセッションIDとして再利用
+    response->set_session_id(session_id);
+
+    std::cout << "Authentication successful for user: " << session.user << ", session_id: " << session_id << std::endl;
+
     return grpc::Status::OK;
 }
