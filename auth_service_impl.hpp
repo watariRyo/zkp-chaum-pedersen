@@ -1,19 +1,22 @@
 #ifndef AUTH_SERVICE_IMPL_HPP
 #define AUTH_SERVICE_IMPL_HPP
 
+#include <grpcpp/grpcpp.h>
+
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <mutex>
 #include <unordered_map>
-#include <grpcpp/grpcpp.h>
+
 #include "zkp_auth.grpc.pb.h"
 
 using namespace boost::multiprecision;
 
-class AuthServiceImpl final : public zkp_auth::Auth::Service {
-public:
+class AuthServiceImpl final : public zkp_auth::Auth::Service
+{
+   public:
     /**
      * @fn
      * @brief ユーザー登録を行う。
@@ -21,8 +24,7 @@ public:
      * @param request 登録リクエスト（ユーザー名、y1、y2を含む）
      * @param response 登録レスポンス（成功/失敗を含む）
      */
-    grpc::Status Register(grpc::ServerContext* context,
-                          const zkp_auth::RegisterRequest* request,
+    grpc::Status Register(grpc::ServerContext* context, const zkp_auth::RegisterRequest* request,
                           zkp_auth::RegisterResponse* response) override;
     /**
      * @fn
@@ -31,10 +33,9 @@ public:
      * @param request チャレンジリクエスト(ユーザー名、r1、r2を含む)
      * @param response チャレンジレスポンス（auth_id、c)
      */
-    grpc::Status CreateAuthenticationChallenge(
-        grpc::ServerContext* context,
-        const zkp_auth::AuthenticationChallengeRequest* request,
-        zkp_auth::AuthenticationChallengeResponse* response) override;
+    grpc::Status CreateAuthenticationChallenge(grpc::ServerContext* context,
+                                               const zkp_auth::AuthenticationChallengeRequest* request,
+                                               zkp_auth::AuthenticationChallengeResponse* response) override;
 
     /**
      * @fn
@@ -43,11 +44,11 @@ public:
      * @param request 認証回答リクエスト（auth_id、sを含む）
      * @param response 認証回答レスポンス（成功/失敗)
      */
-    grpc::Status VerifyAuthentication(
-        grpc::ServerContext* context,
-        const zkp_auth::AuthenticationAnswerRequest* request,
-        zkp_auth::AuthenticationAnswerResponse* response) override;
-private:
+    grpc::Status VerifyAuthentication(grpc::ServerContext* context,
+                                      const zkp_auth::AuthenticationAnswerRequest* request,
+                                      zkp_auth::AuthenticationAnswerResponse* response) override;
+
+   private:
     /**
      * @fn
      * @brief バイト列をcpp_intに変換する。
@@ -69,12 +70,14 @@ private:
      * @brief 一意な認証IDを生成する。
      * @return 生成された認証ID
      */
-    std::string generate_auth_id() {
+    std::string generate_auth_id()
+    {
         boost::uuids::uuid uuid = boost::uuids::random_generator()();
         return boost::uuids::to_string(uuid);
     }
 
-    struct UserInfo {
+    struct UserInfo
+    {
         // registration
         std::string name;
         cpp_int y1;
@@ -88,7 +91,8 @@ private:
         // std::string session_id;
     };
 
-    struct AuthSession {
+    struct AuthSession
+    {
         std::string user;
         // authorization
         cpp_int r1;
@@ -96,26 +100,30 @@ private:
         // verification
         cpp_int c;
     };
-    
+
     // 複数リクエストからの同時アクセス保護のためのユーザーストア
-    struct UserStore {
+    struct UserStore
+    {
         std::mutex mutex;
         std::unordered_map<std::string, UserInfo> user_info;
 
         // RAIIパターンで例外発生時も必ずロックを解放する
-        template<typename Func>
-        auto access(Func f) {
+        template <typename Func>
+        auto access(Func f)
+        {
             std::lock_guard<std::mutex> lock(mutex);
             return f(user_info);
         }
     };
 
-    struct SessionStore {
+    struct SessionStore
+    {
         std::mutex mutex;
         std::unordered_map<std::string, AuthSession> sessions;
 
-        template<typename Func>
-        auto access(Func f) {
+        template <typename Func>
+        auto access(Func f)
+        {
             std::lock_guard<std::mutex> lock(mutex);
             return f(sessions);
         }
@@ -129,4 +137,4 @@ private:
     SessionStore session_store_;
 };
 
-#endif // AUTH_SERVICE_IMPL_HPP
+#endif  // AUTH_SERVICE_IMPL_HPP

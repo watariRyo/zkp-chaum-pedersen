@@ -1,17 +1,22 @@
 #include "auth_server.hpp"
-#include "auth_service_impl.hpp"
 
-#include <iostream>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 
-AuthServer::~AuthServer() {
-    if (server_) {
+#include <iostream>
+
+#include "auth_service_impl.hpp"
+
+AuthServer::~AuthServer()
+{
+    if (server_)
+    {
         server_->Shutdown();
     }
 }
 
-void AuthServer::Run(const std::string& server_address) {
+void AuthServer::Run(const std::string& server_address)
+{
     AuthServiceImpl service;
 
     grpc::ServerBuilder builder;
@@ -19,7 +24,8 @@ void AuthServer::Run(const std::string& server_address) {
     builder.RegisterService(&service);
 
     server_ = builder.BuildAndStart();
-    if (!server_) {
+    if (!server_)
+    {
         std::cerr << "Failed to start server on " << server_address << std::endl;
         return;
     }

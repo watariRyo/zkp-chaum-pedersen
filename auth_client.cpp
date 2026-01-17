@@ -1,35 +1,40 @@
+#include <grpcpp/grpcpp.h>
+
 #include <iostream>
 #include <memory>
 #include <string>
-#include <grpcpp/grpcpp.h>
 
-#include "zkp_auth.grpc.pb.h"
 #include "chaum_pedersen.hpp"
+#include "zkp_auth.grpc.pb.h"
 #include "zkp_constants.hpp"
 
 using namespace boost::multiprecision;
 
 // サーバと同じ変換関数をクライアント側にも用意
-cpp_int bytes_to_cpp_int(const std::string& s) {
-    if (s.empty()) {
+cpp_int bytes_to_cpp_int(const std::string& s)
+{
+    if (s.empty())
+    {
         return 0;
     }
     // 16進数文字列からcpp_intに変換
     return cpp_int("0x" + s);
 }
 
-std::string cpp_int_to_bytes(const cpp_int& n) {
+std::string cpp_int_to_bytes(const cpp_int& n)
+{
     std::stringstream ss;
     ss << std::hex << n;
     return ss.str();
 }
 
-class AuthClient {
-public:
-    AuthClient(std::shared_ptr<grpc::Channel> channel)
-        : stub_(zkp_auth::Auth::NewStub(channel)) {}
+class AuthClient
+{
+   public:
+    AuthClient(std::shared_ptr<grpc::Channel> channel) : stub_(zkp_auth::Auth::NewStub(channel)) {}
 
-    cpp_int register_flow(const std::string user) {
+    cpp_int register_flow(const std::string user)
+    {
         const auto constants = get_zkp_constants();
         ChaumPedersen cp(constants.p, constants.q, constants.g, constants.h);
 
@@ -37,7 +42,8 @@ public:
         const cpp_int x = generate_random(constants.q);
 
         std::cout << "Registering user: " << user << std::endl;
-        if (!register_user(cp, user, x)) {
+        if (!register_user(cp, user, x))
+        {
             std::cerr << "User registration failed or already exist." << std::endl;
             return -1;
         }
@@ -48,7 +54,8 @@ public:
         return x;
     }
 
-    void login_flow(const std::string& user, const cpp_int& x) {
+    void login_flow(const std::string& user, const cpp_int& x)
+    {
         const auto constants = get_zkp_constants();
         ChaumPedersen cp(constants.p, constants.q, constants.g, constants.h);
 
@@ -63,7 +70,8 @@ public:
 
         std::string auth_id;
         cpp_int challenge_c;
-        if (!create_auth_challenge(user, commitment, auth_id, challenge_c)) {
+        if (!create_auth_challenge(user, commitment, auth_id, challenge_c))
+        {
             std::cerr << "Failed to create authentication challenge." << std::endl;
             return;
         }
@@ -75,16 +83,19 @@ public:
         const Response response_s = cp.solve_response(k, challenge_c_struct, x);
 
         std::string session_id;
-        if (!verify_authentication(auth_id, response_s, session_id)) {
+        if (!verify_authentication(auth_id, response_s, session_id))
+        {
             std::cerr << "Authentication failed." << std::endl;
             return;
         }
-        
+
         std::cout << "Authentication successful for user: " << user << ", session_id: " << session_id << std::endl;
     }
     ~AuthClient() {}
-private:
-    bool register_user(const ChaumPedersen& cp, const std::string& user, const cpp_int& x) {
+
+   private:
+    bool register_user(const ChaumPedersen& cp, const std::string& user, const cpp_int& x)
+    {
         zkp_auth::RegisterRequest request;
         request.set_user(user);
 
@@ -97,8 +108,10 @@ private:
         grpc::ClientContext context;
         grpc::Status status = stub_->Register(&context, request, &response);
 
-        if (!status.ok()) {
-            if (status.error_code() != grpc::ALREADY_EXISTS) {
+        if (!status.ok())
+        {
+            if (status.error_code() != grpc::ALREADY_EXISTS)
+            {
                 std::cerr << "Register RPC failed: " << status.error_message() << std::endl;
             }
             return false;
@@ -106,7 +119,9 @@ private:
         return true;
     }
 
-    bool create_auth_challenge(const std::string& user, const Commitment& commitment, std::string& out_auth_id, cpp_int& out_c) {
+    bool create_auth_challenge(const std::string& user, const Commitment& commitment, std::string& out_auth_id,
+                               cpp_int& out_c)
+    {
         zkp_auth::AuthenticationChallengeRequest request;
         request.set_user(user);
         request.set_r1(cpp_int_to_bytes(commitment.r1));
@@ -116,7 +131,8 @@ private:
         grpc::ClientContext context;
         grpc::Status status = stub_->CreateAuthenticationChallenge(&context, request, &response);
 
-        if (!status.ok()) {
+        if (!status.ok())
+        {
             std::cerr << "CreateAuthenticationChallenge RPC failed: " << status.error_message() << std::endl;
             return false;
         }
@@ -126,7 +142,8 @@ private:
         return true;
     }
 
-    bool verify_authentication(const std::string& auth_id, const Response& response_s, std::string& out_session_id) {
+    bool verify_authentication(const std::string& auth_id, const Response& response_s, std::string& out_session_id)
+    {
         zkp_auth::AuthenticationAnswerRequest request;
         request.set_auth_id(auth_id);
         request.set_s(cpp_int_to_bytes(response_s.s));
@@ -135,7 +152,8 @@ private:
         grpc::ClientContext context;
         grpc::Status status = stub_->VerifyAuthentication(&context, request, &response);
 
-        if (!status.ok()) {
+        if (!status.ok())
+        {
             std::cerr << "VerifyAuthentication RPC failed: " << status.error_message() << std::endl;
             return false;
         }
@@ -147,14 +165,17 @@ private:
     std::unique_ptr<zkp_auth::Auth::Stub> stub_;
 };
 
-void print_usage() {
+void print_usage()
+{
     std::cerr << "Usage:\n"
               << "  ./auth_client register <username>\n"
               << "  ./auth_client login <username> <secret_key_hex>\n";
 }
 
-int main(int argc, char** argv) {
-    if (argc < 3) {
+int main(int argc, char** argv)
+{
+    if (argc < 3)
+    {
         print_usage();
         return 1;
     }
@@ -165,21 +186,28 @@ int main(int argc, char** argv) {
     std::string mode = argv[1];
     std::string user = argv[2];
 
-    if (mode == "register") {
+    if (mode == "register")
+    {
         cpp_int x = client.register_flow(user);
-        if (x == -1) {
+        if (x == -1)
+        {
             return 1;
         }
         client.login_flow(user, x);
-    } else if (mode == "login") {
-        if (argc < 4) {
+    }
+    else if (mode == "login")
+    {
+        if (argc < 4)
+        {
             print_usage();
             return 1;
         }
         // 16進数文字列として秘密鍵xを受け取り変換
         cpp_int x("0x" + std::string(argv[3]));
         client.login_flow(user, x);
-    } else {
+    }
+    else
+    {
         print_usage();
         return 1;
     }
