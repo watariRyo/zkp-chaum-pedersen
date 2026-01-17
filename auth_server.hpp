@@ -11,6 +11,8 @@ namespace grpc
 class Server;
 }
 
+namespace zkp_auth
+{
 class AuthServer
 {
    public:
@@ -27,5 +29,6 @@ class AuthServer
    private:
     std::unique_ptr<grpc::Server> server_;
 };
+}  // namespace zkp_auth
 
 #endif  // AUTH_SERVER_HPP

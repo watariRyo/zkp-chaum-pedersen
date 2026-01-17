@@ -13,8 +13,9 @@
 #include "zkp_auth.grpc.pb.h"
 
 using namespace boost::multiprecision;
+using namespace zkp_auth;
 
-class AuthServiceImpl final : public zkp_auth::Auth::Service
+class AuthServiceImpl final : public Auth::Service
 {
    public:
     /**
@@ -24,8 +25,8 @@ class AuthServiceImpl final : public zkp_auth::Auth::Service
      * @param request 登録リクエスト（ユーザー名、y1、y2を含む）
      * @param response 登録レスポンス（成功/失敗を含む）
      */
-    grpc::Status Register(grpc::ServerContext* context, const zkp_auth::RegisterRequest* request,
-                          zkp_auth::RegisterResponse* response) override;
+    grpc::Status Register(grpc::ServerContext* context, const RegisterRequest* request,
+                          RegisterResponse* response) override;
     /**
      * @fn
      * @brief 認証チャレンジを生成する。
@@ -34,8 +35,8 @@ class AuthServiceImpl final : public zkp_auth::Auth::Service
      * @param response チャレンジレスポンス（auth_id、c)
      */
     grpc::Status CreateAuthenticationChallenge(grpc::ServerContext* context,
-                                               const zkp_auth::AuthenticationChallengeRequest* request,
-                                               zkp_auth::AuthenticationChallengeResponse* response) override;
+                                               const AuthenticationChallengeRequest* request,
+                                               AuthenticationChallengeResponse* response) override;
 
     /**
      * @fn
@@ -45,8 +46,8 @@ class AuthServiceImpl final : public zkp_auth::Auth::Service
      * @param response 認証回答レスポンス（成功/失敗)
      */
     grpc::Status VerifyAuthentication(grpc::ServerContext* context,
-                                      const zkp_auth::AuthenticationAnswerRequest* request,
-                                      zkp_auth::AuthenticationAnswerResponse* response) override;
+                                      const AuthenticationAnswerRequest* request,
+                                      AuthenticationAnswerResponse* response) override;
 
    private:
     /**
