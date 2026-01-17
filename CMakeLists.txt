@@ -71,17 +71,25 @@ if(EXISTS "${zkp_auth_proto}")
     protobuf::libprotobuf)
 endif()
 
-# --- Your Application Executable ---
-add_executable(zkp_app main.cpp auth_server.cpp auth_service_impl.cpp)
+# --- Server Executable ---
+add_executable(zkp_server main.cpp auth_server.cpp auth_service_impl.cpp)
 
-target_link_libraries(zkp_app
-  PRIVATE zkp_auth_grpc_proto
-  GTest::gtest
-  GTest::gmock
+target_link_libraries(zkp_server
+  PRIVATE
+  zkp_auth_grpc_proto
   Boost::boost
   )
 
-# --- Your Test Executable ---
+# --- Client Executable ---
+add_executable(zkp_client auth_client.cpp)
+
+target_link_libraries(zkp_client
+  PRIVATE
+  zkp_auth_grpc_proto
+  Boost::boost
+  )
+
+# --- Test Executable ---
 enable_testing()
 add_executable(zkp_test chaum_pedersen_test.cpp)
 target_link_libraries(zkp_test

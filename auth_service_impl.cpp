@@ -10,17 +10,14 @@ cpp_int AuthServiceImpl::bytes_to_cpp_int(const std::string& s) {
     if (s.empty()) {
         return 0;
     }
-    cpp_int n;
-    // import_bitsはビッグエンディアンのバイト列を期待する
-    import_bits(n, s.begin(), s.end());
-    return n;
+    // 16進数文字列からcpp_intに変換
+    return cpp_int("0x" + s);
 }
 
 std::string AuthServiceImpl::cpp_int_to_bytes(const cpp_int& n) {
-    std::string s;
-    // export_bitsはビッグエンディアンでバイト列を出力する
-    export_bits(n, std::back_inserter(s), 8);
-    return s;
+    std::stringstream ss;
+    ss << std::hex << n;
+    return ss.str();
 }
 
 grpc::Status AuthServiceImpl::Register(grpc::ServerContext* context,
@@ -166,6 +163,10 @@ grpc::Status AuthServiceImpl::VerifyAuthentication(
     });
 
     if (!is_verified) {
+        std::cout << "p, q, g, h is " << constants.p << ", " << constants.q << ", " << constants.g << ", " << constants.h << std::endl;
+        std::cout << "y1, y2 is " << user_info.y1 << ", " << user_info.y2 << std::endl;
+        std::cout << "r1, r2 is " << session.r1 << ", " << session.r2 << std::endl;
+        std::cout << "c, s is " << session.c << ", " << response_s.s << std::endl;
         return grpc::Status(grpc::PERMISSION_DENIED, "Authentication failed.");
     }
 
