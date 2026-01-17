@@ -13,7 +13,8 @@ https://grpc.io/docs/languages/cpp/basics/
 - protobuf
 
 ## 手順
-C++20  
+C++20
+### ビルド
 vcpkgで依存管理を行っている。  
 
 ```bash
@@ -22,3 +23,20 @@ vcpkgで依存管理を行っている。
 # target_include_directoriesによってルートからも参照できるように設定する
 $ make build-exe
 ``` 
+
+### 実行
+build以下に、  
+```
+./build/zkp_server
+./build/zkp_client
+./build/zkp_test
+```
+ができる。
+
+`./build/zkp_server`を実行し、別ターミナルで`./build/zkp_client`を実行する形になる。  
+コマンドは以下の通り。
+- ユーザー登録  
+`./build/zkp_client register {user}`
+- ログイン  
+`./build/zkp_client login {user} {secret}`  
+※secretはユーザー登録により出力されたsecretを利用する
