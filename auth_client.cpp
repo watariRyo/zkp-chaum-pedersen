@@ -38,7 +38,7 @@ class AuthClient
         const auto constants = get_zkp_constants();
         ChaumPedersen cp(constants.p, constants.q, constants.g, constants.h);
 
-        // Providerの秘密の知識X
+        // Proverの秘密の知識X
         const cpp_int x = generate_random(constants.q);
 
         std::cout << "Registering user: " << user << std::endl;

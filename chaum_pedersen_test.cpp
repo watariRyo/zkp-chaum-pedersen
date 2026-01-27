@@ -48,7 +48,7 @@ TEST(ChaumPedersenTest, VerifyProofSuccessful)
     EXPECT_FALSE(cp.verify_proof(commitment, public_keys, challenge, invalid_response));
 }
 
-TEST(ChaumPedersenTest, VerifyProof1024bitConstance)
+TEST(ChaumPedersenTest, VerifyProof1024bitConstants)
 {
     //  https://datatracker.ietf.org/doc/html/rfc5114
     //  1024-bit MODP Group with 160-bit Prime Order Subgroup
